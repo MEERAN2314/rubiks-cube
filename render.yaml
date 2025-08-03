@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: rubicks-cube
+    env: python
+    plan: free
+    branch: main  
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --reload"
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
