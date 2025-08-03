@@ -5,5 +5,5 @@ jinja2
 pymongo
 dnspython
 python-dotenv
-kociemba-solver
+kociemba
 pycuber
