@@ -22,16 +22,6 @@ db = client.rubiks_solver
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "solved_cube_state": 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'})
 
-from fastapi.responses import JSONResponse
-
-@app.get("/scramble", response_class=JSONResponse)
-async def get_scramble(request: Request):
-    cube = RubiksCube()
-    scrambled_state, scramble_sequence = cube.generate_scramble()
-    return {
-        "scrambled_state": scrambled_state,
-        "scramble_sequence": " ".join(scramble_sequence)
-    }
 
 @app.post("/solve", response_class=HTMLResponse)
 async def solve_cube(request: Request, scrambled_state: str = Form(...)):
@@ -67,4 +57,14 @@ async def solve_cube(request: Request, scrambled_state: str = Form(...)):
         "solution": "\n".join(solution_steps) if solution_steps else None,
         "error": error_message,
         "scrambled_state_input": scrambled_state # Pass back the input to pre-fill the form
+    })
+
+@app.post("/scramble", response_class=HTMLResponse)
+async def scramble_cube(request: Request):
+    cube = RubiksCube()
+    scrambled_state = cube.scramble()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "scrambled_state": "".join(scrambled_state),
+        "solved_cube_state": 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'
     })
