@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request, Form
+import uvicorn
+import os
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pymongo import MongoClient
 from dotenv import load_dotenv
-import os
 from datetime import datetime
 from cube_solver import RubiksCube
 
@@ -68,3 +69,7 @@ async def scramble_cube(request: Request):
         "scrambled_state": "".join(scrambled_state),
         "solved_cube_state": 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'
     })
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
