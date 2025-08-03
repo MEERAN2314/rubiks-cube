@@ -6,72 +6,663 @@
     <title>Rubik's Cube Solver</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Align to top for more content */
             min-height: 100vh;
-            background-color: #f0f0f0;
+            background: linear-gradient(to right, #ece9e6, #ffffff);
             margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        @media (min-width: 1024px) {
+            .main-layout {
+                flex-direction: row;
+            }
         }
         .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box; /* Ensure padding is included in width */
+        }
+        .instructions-container {
+            text-align: left;
+            padding: 30px;
+            background-color: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            flex-grow: 1;
         }
         h1 {
-            color: #333;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 2.2em;
+            font-weight: 600;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.6em;
+            font-weight: 500;
         }
         form {
             margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
         }
-        input[type="text"] {
-            width: 80%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        input[type="hidden"] {
+            display: none; /* Keep hidden */
         }
         button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .solution {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 4px;
+    background-color: #3498db;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 8px; /* Slightly more rounded */
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 500; /* Lighter font weight */
+    transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.2s ease; /* Add box-shadow transition */
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between icon and text */
+}
+
+button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px); /* More pronounced hover effect */
+    box-shadow: 0 4px 9px rgba(0, 0, 0, 0.25); /* Stronger shadow on hover */
+}
+
+button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); /* Reduced shadow when active */
+}
+
+#reset-cube-button {
+    background-color: #95a5a6;
+}
+
+#reset-cube-button:hover {
+    background-color: #7f8c8d;
+}
+        .solution, .error {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 8px;
             text-align: left;
             white-space: pre-wrap;
+            font-size: 1.1em;
+            line-height: 1.6;
+            border: 1px solid #ccc;
+        }
+        .solution {
+            background-color: #e8f5e9; /* Light green for success */
+            color: #27ae60; /* Darker green text */
+            border-color: #27ae60;
+        }
+        .error {
+            background-color: #ffebee; /* Light red for error */
+            color: #c0392b; /* Darker red text */
+            border-color: #c0392b;
+        }
+        .cube-container {
+            display: grid;
+            grid-template-columns: repeat(4, 90px); /* 3 faces + 1 empty column for alignment */
+            grid-template-rows: repeat(3, 90px);
+            gap: 5px;
+            margin-top: 25px;
+            margin-bottom: 25px;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
+        }
+        .face {
+            width: 90px;
+            height: 90px;
+            display: grid;
+            grid-template-columns: repeat(3, 30px);
+            grid-template-rows: repeat(3, 30px);
+            border: 1px solid #b0b0b0;
+            border-radius: 4px;
+            overflow: hidden; /* Ensures stickers stay within bounds */
+        }
+.sticker {
+    width: 30px;
+    height: 30px;
+    border: 0.5px solid rgba(0, 0, 0, 0.1); /* Subtle border for stickers */
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.3s ease;
+}
+        .sticker:hover {
+            transform: scale(1.05);
+            z-index: 1; /* Bring hovered sticker to front */
+        }
+        /* Face positioning in the grid */
+        .face.U { grid-area: 1 / 2 / 2 / 3; } /* Row 1, Col 2 */
+        .face.L { grid-area: 2 / 1 / 3 / 2; } /* Row 2, Col 1 */
+        .face.F { grid-area: 2 / 2 / 3 / 3; } /* Row 2, Col 2 */
+        .face.R { grid-area: 2 / 3 / 3 / 4; } /* Row 2, Col 3 */
+        .face.B { grid-area: 2 / 4 / 3 / 5; } /* Row 2, Col 4 */
+        .face.D { grid-area: 3 / 2 / 4 / 3; } /* Row 3, Col 2 */
+
+        /* Colors mapped to faces */
+        .color-U { background-color: #ffffff; } /* White */
+        .color-R { background-color: #e74c3c; } /* Red */
+        .color-F { background-color: #2ecc71; } /* Green */
+        .color-D { background-color: #f1c40f; } /* Yellow */
+        .color-L { background-color: #e67e22; } /* Orange */
+        .color-B { background-color: #3498db; } /* Blue */
+
+        .color-palette {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center; /* Center the color boxes */
+    gap: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    background-color: #f0f0f0; /* Slightly darker background */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Softer shadow */
+}
+
+.color-box {
+    width: 40px; /* Slightly larger */
+    height: 40px;
+    border: 2px solid #cccccc; /* Lighter border */
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease; /* Add box-shadow transition */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.color-box:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 9px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+}
+
+.selected-color {
+    border: 3px solid #3498db;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.7); /* Glowing effect */
+}
+        ul {
+            list-style-type: disc;
+            padding-left: 20px; /* Adjusted padding */
+            margin-bottom: 15px;
+            line-height: 1.6; /* Improved line spacing */
+        }
+        ol {
+            padding-left: 20px; /* Adjusted padding */
+            margin-bottom: 15px;
+            line-height: 1.6; /* Improved line spacing */
+        }
+        li {
+            margin-bottom: 8px;
+            font-size: 1.05em; /* Slightly larger font for list items */
+        }
+        p {
+            margin-bottom: 10px;
+            font-size: 1.05em; /* Consistent font size */
+            line-height: 1.6;
+        }
+        .instructions-container h2 {
+            text-align: center; /* Center align headings in instructions */
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .instructions-container ul ul, .instructions-container ol ol {
+            margin-top: 5px;
+            margin-bottom: 5px;
+            font-size: 0.95em; /* Smaller font for nested lists */
+            line-height: 1.5;
+        }
+        .instructions-container ul li strong, .instructions-container ol li strong {
+            color: #34495e; /* Emphasize key terms */
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Rubik's Cube Solver</h1>
-        <form action="/solve" method="post">
-            <label for="scrambled_state">Enter Scrambled State (e.g., URFDLB...):</label><br>
-            <input type="text" id="scrambled_state" name="scrambled_state" required><br>
-            <button type="submit">Solve Cube</button>
+        
+        <div class="color-palette">
+            <div class="color-box color-U selected-color" data-color="U"></div>
+            <div class="color-box color-R" data-color="R"></div>
+            <div class="color-box color-F" data-color="F"></div>
+            <div class="color-box color-D" data-color="D"></div>
+            <div class="color-box color-L" data-color="L"></div>
+            <div class="color-box color-B" data-color="B"></div>
+        </div>
+
+        <div class="cube-container">
+            <div class="face U" data-face="U"></div>
+            <div class="face L" data-face="L"></div>
+            <div class="face F" data-face="F"></div>
+            <div class="face R" data-face="R"></div>
+            <div class="face B" data-face="B"></div>
+            <div class="face D" data-face="D"></div>
+        </div>
+
+        <form id="solve-form" action="/solve" method="post">
+            <input type="hidden" id="scrambled_state" name="scrambled_state" value="{{ solved_cube_state if solved_cube_state else 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB' }}">
+            <div style="display: flex; gap: 10px; justify-content: center; width: 100%;">
+                <button type="submit" style="flex-grow: 1;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022z"/>
+    </svg>
+    Solve Cube
+</button>
+                <button type="button" id="reset-cube-button" style="flex-grow: 1;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/>
+        <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/>
+    </svg>
+    Reset Cube
+</button>
+<button type="button" id="scramble-cube-button" style="flex-grow: 1;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shuffle" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3h.5a.5.5 0 0 1 0 1H13c-1.745 0-3.03.986-3.888 1.834.217.25.414.51.593.782.398.596.73 1.28.94 1.95.213.676.317 1.374.317 2.092 0 .718-.104 1.416-.317 2.092a4.338 4.338 0 0 1-.94 1.95c-.18.272-.375.532-.593.782C9.97 14.014 11.255 15 13 15h.5a.5.5 0 0 1 0 1H13c-2.202 0-3.827-1.24-4.874-2.418A4.59 4.59 0 0 1 7 11.5c0-.618.104-1.216.317-1.892.21-.67.542-1.354.94-1.95.18-.272.375-.532.593-.782C8.03 6.014 6.745 5 5 5H4.5a.5.5 0 0 1 0-1H5c1.745 0 3.03.986 3.888 1.834.217.25.414.51.593.782.398.596.73 1.28.94 1.95.213.676.317 1.374.317 2.092 0 .718-.104 1.416-.317 2.092a4.338 4.338 0 0 1-.94 1.95c-.18.272-.375.532-.593.782C3.827 12.76 2.202 14 0 14H.5a.5.5 0 0 1 0-1H0z"/>
+    </svg>
+    Scramble Cube
+</button>
+            </div>
         </form>
 
-        {% if solution %}
-        <div class="solution">
-            <h2>Solution:</h2>
-            <p>{{ solution }}</p>
+        <div id="loading-indicator" style="display: none; margin-top: 20px;">
+            <p>Solving...</p>
         </div>
-        {% endif %}
+
+        <div id="messages-container" style="margin-top: 20px;">
+            {% if scramble_sequence %}
+            <div class="solution" id="scramble-sequence">
+                <h2>Scramble Sequence:</h2>
+                <p>{{ scramble_sequence }}</p>
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <div class="solution error" id="error-message"> {# Added 'error' class #}
+                <h2>Error:</h2>
+                <p>{{ error }}</p>
+            </div>
+            {% elif solution %}
+            <div class="solution" id="solution-message">
+                <h2>Solution:</h2>
+                <p id="solution-text">{{ solution }}</p>
+                <button type="button" id="visualize-solution-button" style="margin-top: 15px;">Visualize Solution</button>
+            </div>
+            {% endif %}
+        </div>
+
+        <script>
+            const solvedCubeState = 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB';
+
+            const cubeFaces = {
+                'U': Array(9).fill('U'),
+                'R': Array(9).fill('R'),
+                'F': Array(9).fill('F'),
+                'D': Array(9).fill('D'),
+                'L': Array(9).fill('L'),
+                'B': Array(9).fill('B')
+            };
+
+            const faceOrder = ['U', 'R', 'F', 'D', 'L', 'B'];
+
+            // Initialize cube state from server-provided input if available
+            const initialScrambledState = "{{ scrambled_state_input | default('') }}";
+            if (initialScrambledState.length === 54) {
+                let currentIdx = 0;
+                for (const faceChar of faceOrder) {
+                    for (let i = 0; i < 9; i++) {
+                        cubeFaces[faceChar][i] = initialScrambledState[currentIdx++];
+                    }
+                }
+            }
+
+            let currentColor = 'U'; // Default selected color
+
+            function initializeCube(stateString = solvedCubeState) {
+                let currentIdx = 0;
+                for (const faceChar of faceOrder) {
+                    for (let i = 0; i < 9; i++) {
+                        cubeFaces[faceChar][i] = stateString[currentIdx++];
+                    }
+                }
+                renderCube();
+                updateScrambledStateInput();
+            }
+
+            function renderCube() {
+                for (const faceChar in cubeFaces) {
+                    const faceElement = document.querySelector(`.face.${faceChar}`);
+                    faceElement.innerHTML = ''; // Clear existing stickers
+                    for (let i = 0; i < 9; i++) {
+                        const sticker = document.createElement('div');
+                        sticker.classList.add('sticker', `color-${cubeFaces[faceChar][i]}`);
+                        sticker.dataset.face = faceChar;
+                        sticker.dataset.index = i;
+                        sticker.addEventListener('click', handleStickerClick);
+                        faceElement.appendChild(sticker);
+                    }
+                }
+            }
+
+            function clearMessages() {
+                const errorMessage = document.getElementById('error-message');
+                if (errorMessage) {
+                    errorMessage.style.display = 'none';
+                }
+                const solutionMessage = document.getElementById('solution-message');
+                if (solutionMessage) {
+                    solutionMessage.style.display = 'none';
+                }
+            }
+
+            function handleStickerClick(event) {
+                clearMessages(); // Clear messages on interaction
+                const sticker = event.target;
+                const faceChar = sticker.dataset.face;
+                const index = parseInt(sticker.dataset.index);
+
+                // Update the internal cube state
+                cubeFaces[faceChar][index] = currentColor;
+
+                // Update the sticker's visual color
+                sticker.className = `sticker color-${currentColor}`;
+                updateScrambledStateInput();
+            }
+
+            function handleColorPaletteClick(event) {
+                clearMessages(); // Clear messages on interaction
+                // Remove selected-color class from all color boxes
+                document.querySelectorAll('.color-box').forEach(box => {
+                    box.classList.remove('selected-color');
+                });
+
+                // Add selected-color class to the clicked box
+                const clickedColorBox = event.target;
+                clickedColorBox.classList.add('selected-color');
+                currentColor = clickedColorBox.dataset.color;
+            }
+
+            function updateScrambledStateInput() {
+                let scrambledStateString = '';
+                for (const faceChar of faceOrder) {
+                    scrambledStateString += cubeFaces[faceChar].join('');
+                }
+                document.getElementById('scrambled_state').value = scrambledStateString;
+            }
+
+            // Add event listeners to color palette
+            document.querySelectorAll('.color-box').forEach(box => {
+                box.addEventListener('click', handleColorPaletteClick);
+            });
+
+            // Add event listener for Reset Cube button
+            document.getElementById('reset-cube-button').addEventListener('click', () => {
+                initializeCube(solvedCubeState); // Reset to solved state
+                clearMessages(); // Clear any error/solution messages
+            });
+
+           // Add event listener for Scramble Cube button
+            document.getElementById('scramble-cube-button').addEventListener('click', async (event) => {
+                event.preventDefault(); // Prevent default link behavior
+
+                try {
+                    const response = await fetch('/scramble');
+                    const data = await response.json();
+
+                    if (data.scrambled_state && data.scramble_sequence) {
+                        initializeCube(data.scrambled_state);
+                        // Optionally display the scramble sequence
+                        const scrambleSequenceDiv = document.getElementById('scramble-sequence');
+                        if (scrambleSequenceDiv) {
+                            scrambleSequenceDiv.innerHTML = `<h2>Scramble Sequence:</h2><p>${data.scramble_sequence}</p>`;
+                            scrambleSequenceDiv.style.display = 'block';
+                        } else {
+                            // Create the scramble sequence div if it doesn't exist
+                            const messagesContainer = document.getElementById('messages-container');
+                            const newScrambleSequenceDiv = document.createElement('div');
+                            newScrambleSequenceDiv.className = 'solution';
+                            newScrambleSequenceDiv.id = 'scramble-sequence';
+                            newScrambleSequenceDiv.innerHTML = `<h2>Scramble Sequence:</h2><p>${data.scramble_sequence}</p>`;
+                            messagesContainer.appendChild(newScrambleSequenceDiv);
+                        }
+                    } else {
+                        console.error('Failed to retrieve scramble data:', data);
+                        // Handle error appropriately (e.g., display an error message)
+                    }
+                } catch (error) {
+                    console.error('Error fetching scramble data:', error);
+                    // Handle error appropriately (e.g., display an error message)
+                }
+            });
+
+            function validateCubeState() {
+                const stateStr = document.getElementById('scrambled_state').value;
+                if (stateStr.length !== 54) {
+                    return "State must be 54 characters long.";
+                }
+
+                const faceCounts = { 'U': 0, 'R': 0, 'F': 0, 'D': 0, 'L': 0, 'B': 0 };
+                for (const face of stateStr) {
+                    if (face in faceCounts) {
+                        faceCounts[face]++;
+                    } else {
+                        return `Invalid face '${face}' found in state.`;
+                    }
+                }
+
+                for (const face in faceCounts) {
+                    if (faceCounts[face] !== 9) {
+                        return `Invalid state: Must have exactly 9 stickers of each face. Found ${faceCounts[face]} of ${face}.`;
+                    }
+                }
+
+                const centerFaces = { 'U': 'U', 'R': 'R', 'F': 'F', 'D': 'D', 'L': 'L', 'B': 'B' };
+                const centerIndices = { 'U': 4, 'R': 13, 'F': 22, 'D': 31, 'L': 40, 'B': 49 };
+                
+                for (const face in centerFaces) {
+                    const expectedFace = centerFaces[face];
+                    const actualFace = stateStr[centerIndices[face]];
+                    if (actualFace !== expectedFace) {
+                        return `Invalid center piece for ${face} face. Expected ${expectedFace}, but got ${actualFace}.`;
+                    }
+                }
+
+                return null; // Validation passed
+            }
+
+            // Add event listener for Solve Cube form submission
+            document.getElementById('solve-form').addEventListener('submit', (event) => {
+                event.preventDefault(); // Stop the default form submission
+
+                const validationError = validateCubeState();
+                if (validationError) {
+                    const messagesContainer = document.getElementById('messages-container');
+                    messagesContainer.innerHTML = `<div class="solution error" id="error-message"><h2>Error:</h2><p>${validationError}</p></div>`;
+                    messagesContainer.style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('loading-indicator').style.display = 'block';
+                document.getElementById('messages-container').style.display = 'none';
+                
+                // If validation passes, submit the form
+                event.target.submit();
+            });
+
+            // Add event listener for Visualize Solution button
+            const visualizeButton = document.getElementById('visualize-solution-button');
+            if (visualizeButton) {
+                visualizeButton.addEventListener('click', async () => {
+                    const solutionText = document.getElementById('solution-text').innerText;
+                    const solutionMoves = solutionText.split(' ');
+                    
+                    // Disable buttons during visualization
+                    document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+
+                    try {
+                        for (const move of solutionMoves) {
+                            await applyMoveWithAnimation(move);
+                            await new Promise(resolve => setTimeout(resolve, 500)); // Pause between moves
+                        }
+                    } finally {
+                        // Re-enable buttons after visualization
+                        document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                    }
+                });
+            }
+
+            async function applyMoveWithAnimation(move) {
+                const stateStr = document.getElementById('scrambled_state').value;
+                const newStateStr = applyMoveJS(move, stateStr);
+                initializeCube(newStateStr);
+            }
+
+            function applyMoveJS(move, stateStr) {
+                let stateList = stateStr.split('');
+
+                const U = [0,1,2,3,4,5,6,7,8], R = [9,10,11,12,13,14,15,16,17], F = [18,19,20,21,22,23,24,25,26],
+                      D = [27,28,29,30,31,32,33,34,35], L = [36,37,38,39,40,41,42,43,44], B = [45,46,47,48,49,50,51,52,53];
+
+                const moves = {
+                    'R': { face: R, edges: [ [F[2], F[5], F[8]], [D[2], D[5], D[8]], [B[6], B[3], B[0]], [U[2], U[5], U[8]] ] },
+                    'R\'': { face: R, edges: [ [F[2], F[5], F[8]], [U[2], U[5], U[8]], [B[6], B[3], B[0]], [D[2], D[5], D[8]] ], direction: -1 },
+                    'R2': { face: R, edges: [ [F[2], F[5], F[8]], [D[2], D[5], D[8]], [B[6], B[3], B[0]], [U[2], U[5], U[8]] ], double: true },
+                    'L': { face: L, edges: [ [F[0], F[3], F[6]], [U[0], U[3], U[6]], [B[8], B[5], B[2]], [D[0], D[3], D[6]] ], direction: -1 },
+                    'L\'': { face: L, edges: [ [F[0], F[3], F[6]], [D[0], D[3], D[6]], [B[8], B[5], B[2]], [U[0], U[3], U[6]] ] },
+                    'L2': { face: L, edges: [ [F[0], F[3], F[6]], [U[0], U[3], U[6]], [B[8], B[5], B[2]], [D[0], D[3], D[6]] ], double: true },
+                    'U': { face: U, edges: [ [F[0], F[1], F[2]], [R[0], R[1], R[2]], [B[0], B[1], B[2]], [L[0], L[1], L[2]] ] },
+                    'U\'': { face: U, edges: [ [F[0], F[1], F[2]], [L[0], L[1], L[2]], [B[0], B[1], B[2]], [R[0], R[1], R[2]] ], direction: -1 },
+                    'U2': { face: U, edges: [ [F[0], F[1], F[2]], [R[0], R[1], R[2]], [B[0], B[1], B[2]], [L[0], L[1], L[2]] ], double: true },
+                    'D': { face: D, edges: [ [F[6], F[7], F[8]], [L[6], L[7], L[8]], [B[6], B[7], B[8]], [R[6], R[7], R[8]] ], direction: -1 },
+                    'D\'': { face: D, edges: [ [F[6], F[7], F[8]], [R[6], R[7], R[8]], [B[6], B[7], B[8]], [L[6], L[7], L[8]] ] },
+                    'D2': { face: D, edges: [ [F[6], F[7], F[8]], [L[6], L[7], L[8]], [B[6], B[7], B[8]], [R[6], R[7], R[8]] ], double: true },
+                    'F': { face: F, edges: [ [U[6], U[7], U[8]], [R[0], R[3], R[6]], [D[0], D[1], D[2]], [L[2], L[5], L[8]] ] },
+                    'F\'': { face: F, edges: [ [U[6], U[7], U[8]], [L[2], L[5], L[8]], [D[0], D[1], D[2]], [R[0], R[3], R[6]] ], direction: -1 },
+                    'F2': { face: F, edges: [ [U[6], U[7], U[8]], [R[0], R[3], R[6]], [D[0], D[1], D[2]], [L[2], L[5], L[8]] ], double: true },
+                    'B': { face: B, edges: [ [U[0], U[1], U[2]], [L[0], L[3], L[6]], [D[6], D[7], D[8]], [R[2], R[5], R[8]] ], direction: -1 },
+                    'B\'': { face: B, edges: [ [U[0], U[1], U[2]], [R[2], R[5], R[8]], [D[6], D[7], D[8]], [L[0], L[3], L[6]] ] },
+                    'B2': { face: B, edges: [ [U[0], U[1], U[2]], [L[0], L[3], L[6]], [D[6], D[7], D[8]], [R[2], R[5], R[8]] ], double: true }
+                };
+
+                const moveInfo = moves[move];
+                if (!moveInfo) return stateStr;
+
+                const rotate = () => {
+                    const { face, edges, direction = 1 } = moveInfo;
+                    
+                    // Rotate face
+                    const faceColors = face.map(i => stateList[i]);
+                    const newFace = direction === 1 ? [faceColors[6], faceColors[3], faceColors[0], faceColors[7], faceColors[4], faceColors[1], faceColors[8], faceColors[5], faceColors[2]] : [faceColors[2], faceColors[5], faceColors[8], faceColors[1], faceColors[4], faceColors[7], faceColors[0], faceColors[3], faceColors[6]];
+                    face.forEach((val, i) => stateList[val] = newFace[i]);
+
+                    // Swap edges
+                    const edgeSets = edges.map(set => set.map(i => stateList[i]));
+                    if (direction === 1) {
+                        const temp = edgeSets[edgeSets.length - 1];
+                        for (let i = edgeSets.length - 1; i > 0; i--) {
+                            edges[i].forEach((val, j) => stateList[val] = edgeSets[i-1][j]);
+                        }
+                        edges[0].forEach((val, j) => stateList[val] = temp[j]);
+                    } else {
+                        const temp = edgeSets[0];
+                        for (let i = 0; i < edgeSets.length - 1; i++) {
+                            edges[i].forEach((val, j) => stateList[val] = edgeSets[i+1][j]);
+                        }
+                        edges[edgeSets.length - 1].forEach((val, j) => stateList[val] = temp[j]);
+                    }
+                };
+
+                rotate();
+                if (moveInfo.double) rotate();
+
+                return stateList.join('');
+            }
+
+            // Initialize the cube on page load
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeCube(initialScrambledState); // Use initialScrambledState from server if available
+            });
+        </script>
+    </div>
+
+    <div class="container instructions-container">
+        <h2>How to Use This Solver</h2>
+        <ol>
+            <li><strong>Set the Scrambled State:</strong>
+                <ul>
+                    <li>Use the color palette (the colored circles at the top) to select the color you want to apply. The selected color will have a prominent blue border.</li>
+                    <li>Click on each individual sticker on the 3D cube representation to change its color to the currently selected color.</li>
+                    <li><strong>Important Validation Rules:</strong> Ensure that the cube state you input is valid:
+                        <ul>
+                            <li>Each of the six standard Rubik's Cube colors (White, Red, Green, Yellow, Orange, Blue) must appear <strong>exactly 9 times</strong> across all faces.</li>
+                            <li>The center sticker of each face must be its correct, fixed color (e.g., White for the Up face, Red for the Right face, Green for the Front face, Yellow for the Down face, Orange for the Left face, Blue for the Back face).</li>
+                        </ul>
+                    </li>
+                    <li>If you make a mistake or want to start over, click the "Reset Cube" button to quickly return the cube to its perfectly solved state.</li>
+                </ul>
+            </li>
+            <li><strong>Solve the Cube:</strong>
+                <ul>
+                    <li>Once you have accurately and validly input your scrambled cube state, click the "Solve Cube" button.</li>
+                    <li>The solver will then process the state and attempt to find the shortest sequence of moves required to solve the cube.</li>
+                    <li>The solution steps will be clearly displayed below the button.</li>
+                </ul>
+            </li>
+            <li><strong>Understanding Error Messages:</strong>
+                <ul>
+                    <li>If your input state is invalid (e.g., incorrect number of stickers per color, wrong center colors, or an impossible configuration), a clear error message will appear in red, guiding you to rectify the input.</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h2>Beginner's Guide to Rubik's Cube Notation</h2>
+        <p>Rubik's Cube moves are represented by a standard notation, often called "Singmaster Notation." Each letter typically refers to rotating a specific face 90 degrees clockwise when looking directly at that face.</p>
+        <ul>
+            <li><strong>U (Up):</strong> Rotate the top layer 90 degrees clockwise.</li>
+            <li><strong>D (Down):</strong> Rotate the bottom layer 90 degrees clockwise.</li>
+            <li><strong>L (Left):</strong> Rotate the left face 90 degrees clockwise.</li>
+            <li><strong>R (Right):</strong> Rotate the right face 90 degrees clockwise.</li>
+            <li><strong>F (Front):</strong> Rotate the front face 90 degrees clockwise.</li>
+            <li><strong>B (Back):</strong> Rotate the back face 90 degrees clockwise.</li>
+        </ul>
+        <p>Common Variations:</p>
+        <ul>
+            <li><strong>' (Prime):</strong> An apostrophe after a letter (e.g., `U'`, `R'`) indicates a counter-clockwise rotation of that face by 90 degrees.</li>
+            <li><strong>2 (Double):</strong> A '2' after a letter (e.g., `U2`, `F2`) signifies a 180-degree rotation of that face. This can be done in either clockwise or counter-clockwise direction, as the result is the same.</li>
+        </ul>
+        <p>Example: The sequence "R U R'" means:
+            <ol>
+                <li>Rotate the Right face 90 degrees clockwise.</li>
+                <li>Rotate the Up face 90 degrees clockwise.</li>
+                <li>Rotate the Right face 90 degrees counter-clockwise.</li>
+            </ol>
+        </p>
     </div>
 </body>
 </html>

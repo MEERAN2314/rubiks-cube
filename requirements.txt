@@ -5,4 +5,5 @@ jinja2
 pymongo
 dnspython
 python-dotenv
-langchain
+kociemba-solver
+pycuber

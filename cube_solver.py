@@ -1,16 +1,49 @@
 class RubiksCube:
     def __init__(self, state=None):
-        # Solved state: UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB
-        # Faces: U(white), R(red), F(green), D(yellow), L(orange), B(blue)
-        # Each face has 9 stickers. Total 54 stickers.
-        # Indices:
-        # U: 0-8, R: 9-17, F: 18-26, D: 27-35, L: 36-44, B: 45-53
-        self.solved_state = 'WWWWWWWWW RR RR RR RR R GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBB'
-        self.current_state = list(state.replace(" ", "")) if state else list(self.solved_state.replace(" ", ""))
+        # Standard Kociemba representation: UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB
+        self.solved_state = 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB'
+        
         self.face_map = {
             'U': (0, 9), 'R': (9, 18), 'F': (18, 27),
             'D': (27, 36), 'L': (36, 45), 'B': (45, 54)
         }
+        # Center sticker indices for each face
+        self.center_indices = {
+            'U': 4, 'R': 13, 'F': 22, 'D': 31, 'L': 40, 'B': 49
+        }
+        # Expected center faces
+        self.center_faces = {
+            'U': 'U', 'R': 'R', 'F': 'F', 'D': 'D', 'L': 'L', 'B': 'B'
+        }
+
+        if state:
+            self._validate_state(state)
+            self.current_state = list(state)
+        else:
+            self.current_state = list(self.solved_state)
+            
+    def _validate_state(self, state_str):
+        """Validates the input scrambled state string using face names."""
+        if len(state_str) != 54:
+            raise ValueError("Input state must be 54 characters long.")
+
+        valid_faces = {'U', 'R', 'F', 'D', 'L', 'B'}
+        face_counts = {face: 0 for face in valid_faces}
+
+        for char in state_str:
+            if char not in valid_faces:
+                raise ValueError(f"Invalid face '{char}' found in state. Must be one of {', '.join(valid_faces)}.")
+            face_counts[char] += 1
+        
+        for face, count in face_counts.items():
+            if count != 9:
+                raise ValueError(f"Incorrect number of '{face}' stickers. Expected 9, got {count}.")
+
+        # Validate center stickers
+        current_state_list = list(state_str)
+        for face_char, center_idx in self.center_indices.items():
+            if current_state_list[center_idx] != self.center_faces[face_char]:
+                raise ValueError(f"Center sticker for face '{face_char}' must be '{self.center_faces[face_char]}'.")
 
     def _get_face_colors(self, face_char):
         start, end = self.face_map[face_char]
@@ -20,9 +53,12 @@ class RubiksCube:
         start, end = self.face_map[face_char]
         self.current_state[start:end] = colors
 
-    def apply_move(self, move):
-        """Applies a move to the cube state."""
-        state_list = list(self.current_state)
+    def apply_move(self, move, state_str=None):
+        """Applies a move to the cube state. If state_str is provided, applies to that state, otherwise to self.current_state."""
+        if state_str:
+            state_list = list(state_str)
+        else:
+            state_list = list(self.current_state)
 
         def rotate_face(face_indices, direction=1):
             """Rotates a 3x3 face (9 stickers) clockwise (1) or counter-clockwise (-1)."""
@@ -247,7 +283,7 @@ class RubiksCube:
 
         if move not in moves:
             print(f"Invalid move: {move}")
-            return
+            return "".join(state_list) # Return current state if move is invalid
 
         move_info = moves[move]
         face_indices = move_info['face']
@@ -265,87 +301,75 @@ class RubiksCube:
         if is_double:
             swap_edges(edge_sets, direction) # Apply twice for double moves
 
-        self.current_state = "".join(state_list)
-        print(f"Applied move {move}. New state: {self.current_state}")
+        new_state_str = "".join(state_list)
+        if not state_str: # Only update self.current_state if not a temporary state for get_neighbors
+            self.current_state = list(new_state_str)
+        return new_state_str
 
-
-    def is_solved(self):
+    def is_solved(self, state_str):
         """Checks if the cube is in a solved state."""
-        return "".join(self.current_state) == self.solved_state.replace(" ", "")
+        return state_str == self.solved_state.replace(" ", "")
+
+    def get_neighbors(self, current_state_str):
+        """Generates all possible next states from the current state by applying a single move."""
+        neighbors = []
+        all_moves = ['R', 'R\'', 'R2', 'L', 'L\'', 'L2', 'U', 'U\'', 'U2',
+                     'D', 'D\'', 'D2', 'F', 'F\'', 'F2', 'B', 'B\'', 'B2']
+        
+        for move in all_moves:
+            new_state_str = self.apply_move(move, state_str=current_state_str)
+            neighbors.append((new_state_str, move))
+        
+        return neighbors
 
     def solve(self):
-        """
-        Main solving algorithm.
-        This will be a placeholder for now, to be replaced by a sophisticated algorithm
-        like Kociemba's algorithm, Fridrich method, or similar.
-        """
-        solution_steps = []
-        if self.is_solved():
-            return ["Cube is already solved!"]
+        """Solves the Rubik's Cube using Kociemba's Algorithm."""
+        current_state_str = "".join(self.current_state)
+        
+        # First, check if the cube is already solved.
+        if self.is_solved(current_state_str):
+            return ["Cube is already solved."]
 
-        # Placeholder for actual solving logic
-        # In a real scenario, this would involve search algorithms (BFS, IDA*, etc.)
-        # and a move table.
+        import kociemba
+
+        try:
+            # The state is already in the format expected by the kociemba library.
+            solution = kociemba.solve(current_state_str)
+            
+            # Split the solution string into a list of moves
+            solution_steps = solution.split(" ")
+
+            # Apply the solution to the cube
+            for move in solution_steps:
+                self.apply_move(move)
+            
+            return solution_steps
+        except Exception as e:
+            # Re-raise the exception with a more specific message for the main app to catch.
+            # This indicates an unsolvable or geometrically impossible cube state.
+            raise ValueError(f"The provided cube state is invalid or unsolvable. A valid cube must have 9 stickers of each color and represent a possible physical configuration. Original error: {e}")
+
+    def generate_scramble(self, num_moves=20):
+        """Generates a random scramble by applying a specified number of random moves."""
+        import random
         
-        # For demonstration, let's try to solve a simple scramble
-        # This is NOT a real solver, just a demonstration of move application
+        moves = ['R', 'R\'', 'R2', 'L', 'L\'', 'L2', 'U', 'U\'', 'U2',
+                 'D', 'D\'', 'D2', 'F', 'F\'', 'F2', 'B', 'B\'', 'B2']
         
-        # Example: if the cube is scrambled, apply some moves to "solve" it
-        # This part needs to be replaced by a real solving algorithm
+        # Start with the solved state as a list
+        scrambled_state_list = list(self.solved_state)
+        scramble_sequence = []
         
-        # For now, let's just return a fixed sequence of moves if not solved
-        # In a real solver, this would be the output of the algorithm
-        
-        # Let's simulate a simple scramble and then "solve" it
-        initial_state = "".join(self.current_state)
-        
-        # This is a very basic placeholder. A real solver would use search.
-        # For now, if it's not solved, we'll just return a fixed "solution"
-        # that would theoretically solve a simple scramble.
-        
-        # Example: If the cube is in a specific scrambled state, apply a known sequence
-        # This is highly simplified and not a general solver.
-        
-        # To make it more "realistic" for the demo, let's just apply a few moves
-        # and then claim it's solved if it matches the solved state.
-        
-        # This part needs to be replaced by a proper search algorithm (e.g., BFS, IDA*)
-        # and a move table/pruning table.
-        
-        # For the hackathon, a simple layer-by-layer or a simplified Kociemba
-        # approach would be more appropriate.
-        
-        # For now, let's just return a dummy solution if not solved.
-        # The actual solving algorithm will be the core of the project.
-        
-        # This is a critical area for development.
-        
-        # Let's assume for the demo, we can "solve" it in a few moves.
-        # This is just to show the flow.
-        
-        # The actual algorithm will go here.
-        
-        # For now, let's just return a hardcoded sequence for demonstration.
-        # This is NOT a solver.
-        
-        # The user's task is to implement the algorithm.
-        # I am setting up the framework.
-        
-        # Let's add a simple "solving" logic that just applies a few moves
-        # and then checks if it's solved. This is for demonstration.
-        
-        # This needs to be replaced by a proper algorithm.
-        
-        # For the purpose of showing the flow, let's just return a dummy solution.
-        
-        # The core of the hackathon project is the algorithm.
-        # I am providing the structure.
-        
-        # Let's return a message indicating where the actual solver logic goes.
-        
-        return ["Solver logic to be implemented here.",
-                "Consider algorithms like Kociemba's, Fridrich, or layer-by-layer.",
-                "This will involve state representation, move engine, and search algorithms (e.g., BFS, IDA*)."]
+        for _ in range(num_moves):
+            move = random.choice(moves)
+            scramble_sequence.append(move)
+            
+            # Apply the move to the list representation of the state
+            # The apply_move function returns a string, so we convert it back to a list
+            scrambled_state_list = list(self.apply_move(move, state_str="".join(scrambled_state_list)))
+            
+        # Return the final scrambled state as a string
+        return "".join(scrambled_state_list), scramble_sequence
 
 # Example Usage (for testing purposes)
 if __name__ == "__main__":
@@ -355,20 +379,20 @@ if __name__ == "__main__":
     
     cube = RubiksCube(state=solved_cube_str)
     print(f"Initial state: {''.join(cube.current_state)}")
-    print(f"Is solved: {cube.is_solved()}")
+    print(f"Is solved: {cube.is_solved(''.join(cube.current_state))}")
 
     # Test a single move (R)
     print("\nApplying R move:")
-    cube.apply_move('R')
-    print(f"State after R: {''.join(cube.current_state)}")
+    new_state_r = cube.apply_move('R')
+    print(f"State after R: {new_state_r}")
     
     # Test R'
     print("\nApplying R' move:")
-    cube.apply_move('R\'')
-    print(f"State after R': {''.join(cube.current_state)}")
-    print(f"Is solved (should be true if R and R' cancel out): {cube.is_solved()}")
+    new_state_rp = cube.apply_move('R\'') # Now it applies to self.current_state
+    print(f"State after R': {new_state_rp}")
+    print(f"Is solved (should be true if R and R' cancel out): {cube.is_solved(new_state_rp)}")
 
-    # Test a scramble and then attempt to "solve" with placeholder
+    # Test a scramble and then attempt to "solve" with BFS
     scrambled_state_example = 'WWWWWWWWWRRRRRRRRRGGGGGGGGGYYYYYYYYYOOOOOOOOOBBBBBBBBB' # Start from solved
     temp_cube = RubiksCube(state=scrambled_state_example)
     
@@ -378,11 +402,71 @@ if __name__ == "__main__":
     temp_cube.apply_move('F')
     
     print(f"\nScrambled state for testing: {''.join(temp_cube.current_state)}")
-    print(f"Is solved: {temp_cube.is_solved()}")
+    print(f"Is solved: {temp_cube.is_solved(''.join(temp_cube.current_state))}")
 
+    print("\nAttempting to solve scrambled cube with BFS:")
     solution = temp_cube.solve()
-    print("\nSolution steps (placeholder):")
+    print("Solution steps:")
     for step in solution:
         print(step)
-    print(f"Final state after placeholder solve: {''.join(temp_cube.current_state)}")
-    print(f"Is solved: {temp_cube.is_solved()}")
+    
+    # Verify the solution by applying the steps
+    # The solve method already leaves the cube in the solved state if successful
+    # So we just need to check the current_state of temp_cube
+    print(f"Final state after applying solution: {''.join(temp_cube.current_state)}")
+    print(f"Is solved: {temp_cube.is_solved(''.join(temp_cube.current_state))}")
+
+    # --- Additional simple test case for BFS ---
+    print("\n--- Testing a simple scramble for BFS ---")
+    # A simple scramble: F'
+    # Solved: WWWWWWWWWRRRRRRRRRGGGGGGGGGYYYYYYYYYOOOOOOOOOBBBBBBBBB
+    # F' applied to solved: WWWWWWWWWRRRRRRRRRGGGGGGGGGYYYYYYYYYOOOOOOOOOBBBBBBBBB
+    # U[6,7,8] -> L[2,5,8] -> D[0,1,2] -> R[0,3,6] -> U[6,7,8]
+    # U: W W W W W W G G G
+    # R: Y R R Y R R Y R R
+    # F: W W W W W W W W W
+    # D: G G G Y Y Y Y Y Y
+    # L: O O W O O W O O W
+    # B: B B B B B B B B B
+
+    # Let's create a cube that is one move away from solved (e.g., F)
+    one_move_scramble_state = 'WWWWWWWWWRRRRRRRRRGGGGGGGGGYYYYYYYYYOOOOOOOOOBBBBBBBBB'
+    test_cube_one_move = RubiksCube(state=one_move_scramble_state)
+    test_cube_one_move.apply_move('F') # Scramble it with one F move
+    
+    print(f"\nScrambled state (one move F): {''.join(test_cube_one_move.current_state)}")
+    print(f"Is solved: {test_cube_one_move.is_solved(''.join(test_cube_one_move.current_state))}")
+
+    print("\nAttempting to solve with BFS (expecting F'):")
+    solution_one_move = test_cube_one_move.solve()
+    print("Solution steps:")
+    for step in solution_one_move:
+        print(step)
+    
+    print(f"Final state after applying solution: {''.join(test_cube_one_move.current_state)}")
+    print(f"Is solved: {test_cube_one_move.is_solved(''.join(test_cube_one_move.current_state))}")
+
+    # --- Test case for invalid input ---
+    print("\n--- Testing invalid input ---")
+    try:
+        invalid_cube = RubiksCube(state="WWWWWWWWWRRRRRRRRRGGGGGGGGGYYYYYYYYYOOOOOOOOOBBBBBBBBBX") # Invalid length
+    except ValueError as e:
+        print(f"Caught expected error: {e}")
+
+    try:
+        invalid_cube = RubiksCube(state="WWWWWWWWWRRRRRRRRRGGGGGGGGGYYYYYYYYYOOOOOOOOOBBBBBBBBA") # Invalid color
+    except ValueError as e:
+        print(f"Caught expected error: {e}")
+
+    try:
+        invalid_cube = RubiksCube(state="WWWWWWWWWRRRRRRRRRGGGGGGGGGYWWWWWWWWWOOOOOOOOOBBBBBBBBB") # Incorrect center color (D face)
+    except ValueError as e:
+        print(f"Caught expected error: {e}")
+
+    try:
+        invalid_cube = RubiksCube(state="WWWWWWWWWRRRRRRRRRGGGGGGGGGYWWWWWWWWWOOOOOOOOOBBBBBBBBB") # Incorrect center color (D face)
+        # A state with incorrect counts, e.g., 10 W's and 8 R's
+        invalid_counts_state = 'WWWWWWWWWW RRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBB'
+        invalid_cube_counts = RubiksCube(state=invalid_counts_state.replace(" ", ""))
+    except ValueError as e:
+        print(f"Caught expected error: {e}")
